@@ -8,8 +8,6 @@ from .prompts import CORRECTNESS
 
 
 def _run_query_sync(prompt: str, options: ClaudeAgentOptions):
-    """Run the async `query` generator in a fresh event loop on this thread and
-    return the first structured_output (or raise)."""
     async def _inner():
         ret = None
         # have to let the async generator run to completion to avoid errors
@@ -50,5 +48,6 @@ async def check_proof(
         )
     )
 
+    # have to use to_thread or there are errors
     structured = await asyncio.to_thread(_run_query_sync, prompt, options)
     return CorrectnessExplanation.model_validate(structured)
