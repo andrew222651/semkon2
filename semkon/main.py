@@ -1,10 +1,11 @@
+import asyncio
 import sys
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Annotated
 
 import cyclopts
 import yaml
-from tqdm import tqdm
 
 from .claude_code import check_proof
 from .data_models import PropertyResult
@@ -13,6 +14,9 @@ from .find_properties import get_all_properties
 
 app = cyclopts.App()
 
+def run_in_process(directory, p):
+    print("Checking", p, file=sys.stderr)
+    return asyncio.run(check_proof(directory, p))
 
 @app.default
 async def main(
@@ -32,6 +36,13 @@ async def main(
             help="Natural language instructions on which properties to check."
         ),
     ] = None,
+    concurrency: Annotated[
+        int,
+        cyclopts.Parameter(
+            help="Number of concurrent proof checks to run.",
+        ),
+    ] = 2,
+    
 ):
     directory = directory.resolve()
     properties = await get_all_properties(
@@ -40,13 +51,23 @@ async def main(
         filter_str=property_filter,
     )
 
-    data = []
-
     print("Checking proofs...", file=sys.stderr)
-    for p in tqdm(properties):
-        r = await check_proof(directory, p)
-        v = PropertyResult(property_location=p, correctness_explanation=r)
-        data.append(v.model_dump(mode="json"))
+
+    with ProcessPoolExecutor(max_workers=concurrency) as executor:
+        loop = asyncio.get_running_loop()
+        tasks = [
+            loop.run_in_executor(executor, run_in_process, directory, p)
+            for p in properties
+        ]
+
+        results = await asyncio.gather(*tasks)
+
+    data = [
+        PropertyResult(
+            property_location=p, correctness_explanation=r
+        ).model_dump(mode="json")
+        for p, r in zip(properties, results)
+    ]
 
     print(yaml.dump(data, sort_keys=False))
 
