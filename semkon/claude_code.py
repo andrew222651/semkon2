@@ -1,7 +1,10 @@
+import sys
 from pathlib import Path
 import asyncio
 
-from claude_agent_sdk import ClaudeAgentOptions, query, SandboxSettings
+from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query, \
+    SandboxSettings
+from tqdm import tqdm
 
 from .data_models import CorrectnessExplanation, PropertyLocation
 from .prompts import CORRECTNESS
@@ -12,8 +15,9 @@ def _run_query_sync(prompt: str, options: ClaudeAgentOptions):
         ret = None
         # have to let the async generator run to completion to avoid errors
         async for message in query(prompt=prompt, options=options):
-            if hasattr(message, "structured_output") and ret is None:
+            if isinstance(message, ResultMessage):
                 ret = message.structured_output
+                tqdm.write(f"Query cost (USD): {message.total_cost_usd}", file=sys.stderr)
         if ret is None:
             raise RuntimeError("No structured output received")
         else:
