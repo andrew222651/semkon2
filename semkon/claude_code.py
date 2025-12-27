@@ -40,6 +40,7 @@ async def check_proof(
     )
 
     options = ClaudeAgentOptions(
+        # Haiku 4.5 failed
         model="claude-opus-4-5",
         output_format={
             "type": "json_schema",
