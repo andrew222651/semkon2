@@ -3,6 +3,8 @@ Semkon: _semantika kontrolilo_ (semantic checker)
 Semkon uses LLMs to check the correctness of proofs written as comments in your
 codebase.
 
+Pros: uses natural language, cons: relatively high cost
+
 Requires Anthropic API key.
 
 Basic usage: `semkon path/to/your/codebase`.
