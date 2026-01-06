@@ -48,9 +48,6 @@ async def check_proof(
         },
         cwd=directory,
         allowed_tools=["ReadFile", "Bash", "WebFetch", "WebSearch"],
-        sandbox=SandboxSettings(
-            enabled=True,
-        )
     )
 
     # have to use to_thread or there are errors
