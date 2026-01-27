@@ -136,7 +136,10 @@ class _PropositionsResponse(BaseModel):
 
 
 async def _extract_propositions(
-    content: str, filter_str: str | None = None, rel_path: Path | None = None
+    content: str,
+    model: str,
+    filter_str: str | None = None,
+    rel_path: Path | None = None,
 ) -> list[_Proposition]:
     if not re.search(r"\bproof\b", content, re.IGNORECASE):
         return []
@@ -160,9 +163,7 @@ For example, there may be propositions about running times,
 correctness, or auxiliary facts.
 
 {_format_file(content, rel_path=rel_path)}"""
-    # https://ai.pydantic.dev/models/anthropic/#install
-    # https://platform.claude.com/docs/en/about-claude/models/overview#latest-models-comparison
-    llm = Agent('anthropic:claude-haiku-4-5', output_type=_PropositionsResponse)
+    llm = Agent(f'openrouter:{model}', output_type=_PropositionsResponse)
 
     result = await llm.run(initial_message)
     return cast(_PropositionsResponse, result.output).data
@@ -172,6 +173,7 @@ async def get_all_properties(
     directory: Path,
     filter_paths: list[str],
     filter_str: str | None,
+    model: str,
 ) -> list[PropertyLocation]:
     ret = []
     
@@ -182,6 +184,7 @@ async def get_all_properties(
             content=(directory / rel_path).read_text(),
             filter_str=filter_str,
             rel_path=rel_path,
+            model=model,
         )
         for prop in properties:
             ret.append(PropertyLocation(

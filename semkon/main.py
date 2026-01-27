@@ -1,5 +1,6 @@
 import asyncio
 import sys
+import tomllib
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Annotated
@@ -12,11 +13,13 @@ from .data_models import PropertyResult
 from .find_properties import get_all_properties
 
 
-app = cyclopts.App()
+pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
+ver = tomllib.loads(pyproject.read_text())["project"]["version"]
+app = cyclopts.App(version=ver)
 
-def run_in_process(directory, p):
+def run_in_process(directory, p, model):
     print("Checking", p, file=sys.stderr)
-    return asyncio.run(check_proof(directory, p))
+    return asyncio.run(check_proof(directory, p, model))
 
 @app.default
 async def main(
@@ -38,17 +41,23 @@ async def main(
     ] = None,
     concurrency: Annotated[
         int,
-        cyclopts.Parameter(
-            help="Number of concurrent proof checks to run.",
-        ),
+        cyclopts.Parameter(help="Number of concurrent proof checks to run."),
     ] = 2,
-    
+    openrouter_fast_model: Annotated[
+        str,
+        cyclopts.Parameter(help="Model used for easy tasks."),
+    ] = "anthropic/claude-haiku-4.5",
+    openrouter_reasoning_model: Annotated[
+        str,
+        cyclopts.Parameter(help="Model used for hard tasks."),
+    ] = "moonshotai/kimi-k2.5",
 ):
     directory = directory.resolve()
     properties = await get_all_properties(
         directory=directory,
         filter_paths=filter_path or [],
         filter_str=property_filter,
+        model=openrouter_fast_model,
     )
 
     print("Checking proofs...", file=sys.stderr)
@@ -56,7 +65,13 @@ async def main(
     with ProcessPoolExecutor(max_workers=concurrency) as executor:
         loop = asyncio.get_running_loop()
         tasks = [
-            loop.run_in_executor(executor, run_in_process, directory, p)
+            loop.run_in_executor(
+                executor,
+                run_in_process,
+                directory,
+                p,
+                openrouter_reasoning_model,
+            )
             for p in properties
         ]
 
