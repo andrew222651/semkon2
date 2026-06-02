@@ -125,6 +125,7 @@ async def check_proof(
         cwd=directory,
         allowed_tools=["Read", "Bash", "WebFetch", "WebSearch"],
         env=claude_agent_env_overrides(),
+        effort="high",
     )
 
     return await run_structured_query(

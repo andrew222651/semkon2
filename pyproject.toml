@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 requires-python = ">=3.11,<4"
 name = "semkon"
 dependencies = [
-    "claude-agent-sdk==0.1.13",
+    "claude-agent-sdk==0.2.87",
     "cyclopts==4.3.0",
     "gitignore-parser==0.1.13",
     "pydantic==2.12.5",

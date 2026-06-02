@@ -11,7 +11,7 @@ By "correct", we mean very high confidence that each step of the proof is valid,
 the proof does in fact prove the proposition, and that the proof is supported by
 what the code does. Mark the proof as "incorrect" if you understand it and the
 code but the proof is wrong. Use "unknown" if e.g. you don't 100% know how an
-external library works, or the proof needs more detail. Think hard: Skeptically
+external library works, or the proof needs more detail. Skeptically
 and rigorously check every claim with references to the code. If the proof
 references an explicitly-stated axiom (or "assumption", etc) found in the
 codebase, you can assume that the axiom is true. If the proof references another
