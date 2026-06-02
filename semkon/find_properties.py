@@ -2,13 +2,18 @@ import math
 import re
 import sys
 from pathlib import Path
-from typing import cast
 
 import gitignore_parser
+from claude_agent_sdk import ClaudeAgentOptions
 from pydantic import BaseModel
-from pydantic_ai import Agent
 from tqdm import tqdm
 
+from .claude_sdk import (
+    CLAUDE_CODE_HAIKU_MODEL,
+    claude_agent_env_overrides,
+    run_structured_query,
+    structured_output_format,
+)
 from .data_models import PropertyLocation
 
 
@@ -73,9 +78,9 @@ class _FileFilters:
                 and _is_small_file(f)
                 and _is_text_file(f)
                 and not any(
-                rule.match(f)
-                for rule in my_gitignore_rules + self._filter_rules
-            )
+                    rule.match(f)
+                    for rule in my_gitignore_rules + self._filter_rules
+                )
             ):
                 ret.append(f)
 
@@ -135,21 +140,17 @@ class _PropositionsResponse(BaseModel):
     data: list[_Proposition]
 
 
-async def _extract_propositions(
+def _build_proposition_prompt(
     content: str,
-    model: str,
     filter_str: str | None = None,
     rel_path: Path | None = None,
-) -> list[_Proposition]:
-    if not re.search(r"\bproof\b", content, re.IGNORECASE):
-        return []
-
+) -> str:
     if filter_str is not None and filter_str.strip():
         filter_text = f"* {filter_str}"
     else:
         filter_text = ""
 
-    initial_message = f"""The following file is taken from a repository of source code.
+    return f"""The following file is taken from a repository of source code.
 It may (or may not) contain one or more formal propositions that have something to do with the codebase.
 These would be written as developer documentation. They may be called "properties", "theorems", etc.
 Extract all such propositions that satisfy the following criteria:
@@ -163,20 +164,48 @@ For example, there may be propositions about running times,
 correctness, or auxiliary facts.
 
 {_format_file(content, rel_path=rel_path)}"""
-    llm = Agent(f'openrouter:{model}', output_type=_PropositionsResponse)
 
-    result = await llm.run(initial_message)
-    return cast(_PropositionsResponse, result.output).data
+
+async def _run_property_extraction_agent(
+    prompt: str,
+) -> _PropositionsResponse:
+    options = ClaudeAgentOptions(
+        model=CLAUDE_CODE_HAIKU_MODEL,
+        output_format=structured_output_format(_PropositionsResponse),
+        env=claude_agent_env_overrides(),
+    )
+    return await run_structured_query(
+        prompt,
+        options,
+        _PropositionsResponse,
+    )
+
+
+async def _extract_propositions(
+    content: str,
+    filter_str: str | None = None,
+    rel_path: Path | None = None,
+) -> list[_Proposition]:
+    if not re.search(r"\bproof\b", content, re.IGNORECASE):
+        return []
+
+    initial_message = _build_proposition_prompt(
+        content=content,
+        filter_str=filter_str,
+        rel_path=rel_path,
+    )
+
+    response = await _run_property_extraction_agent(initial_message)
+    return response.data
 
 
 async def get_all_properties(
     directory: Path,
     filter_paths: list[str],
     filter_str: str | None,
-    model: str,
 ) -> list[PropertyLocation]:
     ret = []
-    
+
     rel_paths = _get_rel_paths(directory, filter_paths=filter_paths)
     print("Searching for properties in files...", file=sys.stderr)
     for rel_path in tqdm(rel_paths):
@@ -184,12 +213,11 @@ async def get_all_properties(
             content=(directory / rel_path).read_text(),
             filter_str=filter_str,
             rel_path=rel_path,
-            model=model,
         )
         for prop in properties:
             ret.append(PropertyLocation(
                 rel_path=rel_path,
                 line_num=prop.line_num,
             ))
-    
+
     return ret

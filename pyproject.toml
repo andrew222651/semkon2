@@ -10,7 +10,6 @@ dependencies = [
     "cyclopts==4.3.0",
     "gitignore-parser==0.1.13",
     "pydantic==2.12.5",
-    "pydantic-ai==1.27.0",
     "PyYAML==6.0.3",
     "tqdm==4.67.1",
 ]

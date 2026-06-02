@@ -8,7 +8,11 @@ from typing import Annotated
 import cyclopts
 import yaml
 
-from .claude_code import check_proof
+from .claude_sdk import (
+    anthropic_auth_description,
+    anthropic_auth_mode,
+    check_proof,
+)
 from .data_models import PropertyResult
 from .find_properties import get_all_properties
 
@@ -17,9 +21,11 @@ pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
 ver = tomllib.loads(pyproject.read_text())["project"]["version"]
 app = cyclopts.App(version=ver)
 
-def run_in_process(directory, p, model):
-    print("Checking", p, file=sys.stderr)
-    return asyncio.run(check_proof(directory, p, model))
+
+def run_in_process(directory, property_location):
+    print("Checking", property_location, file=sys.stderr)
+    return asyncio.run(check_proof(directory, property_location))
+
 
 @app.default
 async def main(
@@ -43,21 +49,15 @@ async def main(
         int,
         cyclopts.Parameter(help="Number of concurrent proof checks to run."),
     ] = 2,
-    openrouter_fast_model: Annotated[
-        str,
-        cyclopts.Parameter(help="Model used for easy tasks."),
-    ] = "anthropic/claude-haiku-4.5",
-    openrouter_reasoning_model: Annotated[
-        str,
-        cyclopts.Parameter(help="Model used for hard tasks."),
-    ] = "moonshotai/kimi-k2.5",
 ):
+    anthropic_auth_mode()
     directory = directory.resolve()
+    print(f"Using {anthropic_auth_description()}.", file=sys.stderr)
+
     properties = await get_all_properties(
         directory=directory,
         filter_paths=filter_path or [],
         filter_str=property_filter,
-        model=openrouter_fast_model,
     )
 
     print("Checking proofs...", file=sys.stderr)
@@ -70,7 +70,6 @@ async def main(
                 run_in_process,
                 directory,
                 p,
-                openrouter_reasoning_model,
             )
             for p in properties
         ]

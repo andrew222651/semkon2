@@ -5,9 +5,9 @@ documentation in your codebase.
 
 Pros: uses natural language, cons: relatively high cost
 
-Requires `OPENROUTER_API_KEY` environment variable. You may have to explicitly
-allow the model provider in your OpenRouter settings.
-<!-- https://openrouter.ai/workspaces/default/guardrails/default/edit -->
+Requires either `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY`. If both
+are set, Semkon uses Claude Code OAuth. Proof checks use the default opus model
+and property extraction uses the default haiku model.
 
 Basic usage: `semkon path/to/your/codebase`.
 Results are printed to standard output as YAML. Exit code is 0 if all proofs
