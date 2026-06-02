@@ -5,7 +5,8 @@ documentation in your codebase.
 
 Pros: uses natural language, cons: relatively high cost
 
-Requires either `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY`. If both
+Requires either `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`)
+or `ANTHROPIC_API_KEY`. If both
 are set, Semkon uses Claude Code OAuth. Proof checks use the default opus model
 and property extraction uses the default haiku model.
 
